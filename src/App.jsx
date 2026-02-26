@@ -244,15 +244,54 @@ const fetchAllData = async () => {
   }
   async function handleSubmit() {
     const clean = cleanRatings();
-    if (Object.keys(clean).length < PARAMETERS.length) { notify("Please rate all 13 parameters."); return; }
+    if (Object.keys(clean).length < PARAMETERS.length) {
+      notify("Please rate all 13 parameters.");
+      return;
+    }
+  
     const sc = getStatus(clean);
-    const entry = { csm:selectedCSM, account:selectedAccount, quarter:selectedQuarter, ratings:clean, status:sc, timestamp:new Date().toISOString() };
-    const key = safeKey("rp_hist", selectedCSM, selectedAccount);
-    const prev = (await sGet(key, true)) || [];
-    const updated = [entry, ...prev.filter(h => h.quarter !== selectedQuarter)]
-      .sort((a,b) => QUARTERS.indexOf(b.quarter) - QUARTERS.indexOf(a.quarter));
-    await sSet(key, updated, true); // shared storage
-    setHistory(updated); setScreen("results"); notify("Risk profile saved.");
+  
+    const entry = {
+      csm: selectedCSM,
+      account: selectedAccount,
+      quarter: selectedQuarter,
+      ratings: clean,
+      status: sc,
+      timestamp: new Date().toISOString(),
+    };
+  
+    try {
+      // 🔥 NEW: Send data to MongoDB via API
+      const res = await fetch("/api/test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(entry),
+      });
+  
+      const result = await res.json();
+  
+      if (!result.success) {
+        throw new Error("Database save failed");
+      }
+  
+      // (Keep your existing storage logic as backup)
+      const key = safeKey("rp_hist", selectedCSM, selectedAccount);
+      const prev = (await sGet(key, true)) || [];
+      const updated = [entry, ...prev.filter(h => h.quarter !== selectedQuarter)]
+        .sort((a,b) => QUARTERS.indexOf(b.quarter) - QUARTERS.indexOf(a.quarter));
+  
+      await sSet(key, updated, true);
+  
+      setHistory(updated);
+      setScreen("results");
+      notify("Risk profile saved to database 🚀");
+  
+    } catch (error) {
+      console.error("Submit error:", error);
+      notify("Failed to save to database.");
+    }
   }
   async function handleViewHistory() {
     const key = safeKey("rp_hist", selectedCSM, selectedAccount);
