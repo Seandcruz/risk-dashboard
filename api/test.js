@@ -15,28 +15,37 @@ export default async function handler(req, res) {
   try {
     const client = await clientPromise;
     const db = client.db("risk-dashboard");
-
-    // Create or use collection
     const collection = db.collection("risks");
 
-    // Insert sample risk (only once)
-    const sampleRisk = {
-      title: "API Failure Risk",
-      severity: "High",
-      status: "Open",
-      createdAt: new Date(),
-    };
+    // GET → Fetch all risks
+    if (req.method === "GET") {
+      const risks = await collection.find({}).toArray();
+      return res.status(200).json({
+        success: true,
+        count: risks.length,
+        data: risks,
+      });
+    }
 
-    await collection.insertOne(sampleRisk);
+    // POST → Add new risk
+    if (req.method === "POST") {
+      const newRisk = {
+        title: req.body.title,
+        severity: req.body.severity,
+        status: req.body.status,
+        createdAt: new Date(),
+      };
 
-    const allRisks = await collection.find({}).toArray();
+      const result = await collection.insertOne(newRisk);
 
-    res.status(200).json({
-      success: true,
-      message: "Risk data stored successfully 🚀",
-      totalRisks: allRisks.length,
-      data: allRisks,
-    });
+      return res.status(201).json({
+        success: true,
+        message: "Risk added successfully",
+        id: result.insertedId,
+      });
+    }
+
+    res.status(405).json({ message: "Method not allowed" });
   } catch (error) {
     res.status(500).json({
       success: false,
