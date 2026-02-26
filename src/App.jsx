@@ -154,7 +154,7 @@ const fetchAllData = async () => {
     if (result.success && result.data) {
       const formatted = {};
       result.data.forEach((item) => {
-        const key = item._id; // safer unique key
+        const key = item._id; // always unique from MongoDB
         formatted[key] = item;
       });
 
