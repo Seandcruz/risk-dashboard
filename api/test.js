@@ -29,18 +29,20 @@ export default async function handler(req, res) {
 
     // POST → Add new risk
     if (req.method === "POST") {
-      const newRisk = {
-        title: req.body.title,
-        severity: req.body.severity,
-        status: req.body.status,
-        createdAt: new Date(),
-      };
+        const newEntry = {
+            csm: req.body.csm,
+            account: req.body.account,
+            quarter: req.body.quarter,
+            ratings: req.body.ratings,
+            status: req.body.status,
+            timestamp: req.body.timestamp || new Date().toISOString(),
+          };
 
-      const result = await collection.insertOne(newRisk);
+      const result = await collection.insertOne(newEntry);
 
       return res.status(201).json({
         success: true,
-        message: "Risk added successfully",
+        message: "Risk profile saved to DB 🚀",
         id: result.insertedId,
       });
     }
