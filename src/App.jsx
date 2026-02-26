@@ -154,8 +154,16 @@ const fetchAllData = async () => {
     if (result.success && result.data) {
       const formatted = {};
       result.data.forEach((item) => {
-        const key = item._id; // always unique from MongoDB
-        formatted[key] = item;
+        // Build key in the same format your app expects
+        const key = `${item.csm}__${item.account}`;
+      
+        // Keep only the latest entry per CSM + Account
+        if (
+          !formatted[key] ||
+          new Date(item.timestamp) > new Date(formatted[key].timestamp)
+        ) {
+          formatted[key] = item;
+        }
       });
 
       setAllData(formatted);
