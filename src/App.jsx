@@ -141,6 +141,33 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [toast, setToast]   = useState("");
 
+  // 🔽 ADD DATABASE FETCH RIGHT HERE
+useEffect(() => {
+  fetchAllData();
+}, []);
+
+const fetchAllData = async () => {
+  try {
+    const res = await fetch("/api/test");
+    const result = await res.json();
+
+    if (result.success && result.data) {
+      const formatted = {};
+      result.data.forEach((item) => {
+        const key = item._id; // safer unique key
+        formatted[key] = item;
+      });
+
+      setAllData(formatted);
+      console.log("DB data loaded:", formatted);
+    }
+  } catch (err) {
+    console.error("Failed to fetch DB data:", err);
+  } finally {
+    setLoaded(true);
+  }
+};
+
   // ── Boot ──
   useEffect(() => {
     (async () => {
