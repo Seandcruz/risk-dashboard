@@ -293,6 +293,7 @@ const fetchAllData = async () => {
       await sSet(key, updated, true);
   
       setHistory(updated);
+      await fetchAllData(); // 🔥 Add this line
       setScreen("results");
       notify("Risk profile saved to database 🚀");
   
