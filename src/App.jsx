@@ -128,6 +128,7 @@ export default function App() {
   const [mgr_filterCSM, setMgrFilterCSM] = useState("all");
   const [mgr_drill, setMgrDrill]       = useState(null); // { csm, account }
   const [mgr_drillHistory, setMgrDrillHistory] = useState([]);
+  const [allHistoryData, setAllHistoryData] = useState([]);
   const [allData, setAllData]          = useState({}); // { "csm__account": latestEntry }
 
   // Admin state
@@ -202,12 +203,16 @@ const fetchAllData = async () => {
     const result = await res.json();
 
     if (result.success && result.data) {
+      // 🔥 1. STORE FULL HISTORY (needed for Trends & History view)
+      setAllHistoryData(result.data);
+
+      // 🔥 2. STILL keep latest snapshot for Manager dashboard (existing logic)
       const formatted = {};
       result.data.forEach((item) => {
         // Build key in the same format your app expects
         const key = `${item.csm}__${item.account}`;
-      
-        // Keep only the latest entry per CSM + Account
+
+        // Keep only the latest entry per CSM + Account (for summary cards)
         if (
           !formatted[key] ||
           new Date(item.timestamp) > new Date(formatted[key].timestamp)
@@ -217,7 +222,9 @@ const fetchAllData = async () => {
       });
 
       setAllData(formatted);
-      console.log("DB data loaded:", formatted);
+
+      console.log("Full DB history:", result.data); // 🔍 debug
+      console.log("Latest snapshot:", formatted);
     }
   } catch (err) {
     console.error("Failed to fetch DB data:", err);
