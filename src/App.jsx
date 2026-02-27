@@ -383,9 +383,19 @@ const fetchAllData = async () => {
 
   // ── Manager drill-down ──
   async function openDrill(csm, account) {
-    const key = safeKey("rp_hist", csm, account);
-    const h = (await sGet(key, true)) || [];
-    setMgrDrillHistory(h);
+    // 🔥 Get history from DB instead of local storage
+    const filtered = (allHistoryData || [])
+      .filter(
+        (item) =>
+          item.csm === csm &&
+          item.account === account
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.timestamp) - new Date(a.timestamp)
+      );
+  
+    setMgrDrillHistory(filtered);
     setMgrDrill({ csm, account });
   }
 
