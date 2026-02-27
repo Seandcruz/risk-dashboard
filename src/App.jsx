@@ -157,12 +157,11 @@ const fetchAdminConfig = async () => {
 
     if (result.success && result.data) {
       setCsms(result.data.csms || []);
-      setPasswords(
-        result.data.passwords || {
-          admin: DEFAULT_ADMIN_PW,
-          manager: DEFAULT_MANAGER_PW,
-        }
-      );
+      const dbPasswords = result.data.passwords || {};
+      setPasswords({
+        admin: dbPasswords.admin || DEFAULT_ADMIN_PW,
+        manager: dbPasswords.manager || DEFAULT_MANAGER_PW,
+      });
       console.log("Admin config loaded:", result.data);
     }
   } catch (err) {
