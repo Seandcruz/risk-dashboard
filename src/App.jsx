@@ -360,9 +360,25 @@ const fetchAllData = async () => {
     }
   }
   async function handleViewHistory() {
-    const key = safeKey("rp_hist", selectedCSM, selectedAccount);
-    const h = (await sGet(key, true)) || [];
-    setHistory(h); setScreen("history");
+    if (!selectedCSM || !selectedAccount) {
+      notify("Select CSM and Account first.");
+      return;
+    }
+  
+    // 🔥 Get history from MongoDB (not local storage)
+    const filtered = allHistoryData
+      .filter(
+        (item) =>
+          item.csm === selectedCSM &&
+          item.account === selectedAccount
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.timestamp) - new Date(a.timestamp)
+      );
+  
+    setHistory(filtered);
+    setScreen("history");
   }
 
   // ── Manager drill-down ──
