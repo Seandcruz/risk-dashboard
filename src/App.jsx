@@ -146,6 +146,57 @@ useEffect(() => {
   fetchAllData();
 }, []);
 
+useEffect(() => {
+  fetchAdminConfig();
+}, []);
+
+const fetchAdminConfig = async () => {
+  try {
+    const res = await fetch("/api/admin");
+    const result = await res.json();
+
+    if (result.success && result.data) {
+      setCsms(result.data.csms || []);
+      setPasswords(
+        result.data.passwords || {
+          admin: DEFAULT_ADMIN_PW,
+          manager: DEFAULT_MANAGER_PW,
+        }
+      );
+      console.log("Admin config loaded:", result.data);
+    }
+  } catch (err) {
+    console.error("Failed to load admin config:", err);
+  }
+};
+
+const saveAdminConfig = async (updatedCsms, updatedPasswords) => {
+  try {
+    const res = await fetch("/api/admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        csms: updatedCsms,
+        passwords: updatedPasswords,
+      }),
+    });
+
+    const result = await res.json();
+    if (!result.success) {
+      throw new Error("Failed to save admin config");
+    }
+
+    console.log("Admin config saved to DB:", {
+      csms: updatedCsms,
+      passwords: updatedPasswords,
+    });
+  } catch (err) {
+    console.error("Failed to save admin config:", err);
+  }
+};
+
 const fetchAllData = async () => {
   try {
     const res = await fetch("/api/test");
@@ -317,7 +368,15 @@ const fetchAllData = async () => {
   }
 
   // ── Admin handlers ──
-  async function saveCsms(updated) { setCsms(updated); await sSet("rp_csms_v5", updated, true); }
+  async function saveCsms(updated) {
+    setCsms(updated);
+  
+    // Keep local backup (optional but safe)
+    await sSet("rp_csms_v5", updated, true);
+  
+    // 🔥 CRITICAL: Persist to MongoDB Admin Config
+    await saveAdminConfig(updated, passwords);
+  }
   async function addCSM() {
     const name = newCSMName.trim();
     if (!name || csms.find(c => c.name === name)) { notify("Invalid or duplicate name."); return; }
@@ -329,17 +388,46 @@ const fetchAllData = async () => {
     notify("Removed.");
   }
   async function addAccount() {
-    if (!newAccountName.trim() || !newAccountCSM) { notify("Fill in both fields."); return; }
-    await saveCsms(csms.map(c => c.name === newAccountCSM ? { ...c, accounts:[...c.accounts, newAccountName.trim()] } : c));
-    setNewAccountName(""); notify("Account added.");
+    const account = newAccountName.trim();
+  
+    if (!account || !newAccountCSM) {
+      notify("Fill in both fields.");
+      return;
+    }
+  
+    const updated = csms.map(c => {
+      if (c.name !== newAccountCSM) return c;
+  
+      // Prevent duplicate accounts
+      if (c.accounts.includes(account)) {
+        notify("Account already exists for this CSM.");
+        return c;
+      }
+  
+      return {
+        ...c,
+        accounts: [...c.accounts, account],
+      };
+    });
+  
+    await saveCsms(updated);
+    setNewAccountName("");
+    notify("Account added.");
   }
   async function removeAccount(csmName, accName) {
     await saveCsms(csms.map(c => c.name === csmName ? { ...c, accounts:c.accounts.filter(a => a !== accName) } : c));
     if (selectedAccount === accName) setSelectedAccount(""); notify("Removed.");
   }
   async function updatePasswords(updates) {
-    const updated = { ...passwords, ...updates };
-    setPasswords(updated); await sSet("rp_passwords", updated, true); notify("Password updated.");
+    const updated = {
+      admin: updates.admin?.trim() || passwords.admin,
+      manager: updates.manager?.trim() || passwords.manager,
+    };
+  
+    setPasswords(updated);
+    await sSet("rp_passwords", updated, true); // optional backup
+    await saveAdminConfig(csms, updated); // persist to DB
+    notify("Password updated and saved securely.");
   }
 
   if (!loaded) return <Loader />;
